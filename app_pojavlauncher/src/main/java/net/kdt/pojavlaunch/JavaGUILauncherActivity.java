@@ -262,6 +262,18 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
         decorView.setSystemUiVisibility(uiOptions);
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        JREUtils.setAudioSuspended(false);
+    }
+
+    @Override
+    protected void onStop() {
+        JREUtils.setAudioSuspended(true);
+        super.onStop();
+    }
+
     public static class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
         @Override
         public boolean onScale(ScaleGestureDetector detector) {

@@ -50,6 +50,7 @@ import net.kdt.pojavlaunch.customcontrols.keyboard.LwjglCharSender;
 import net.kdt.pojavlaunch.customcontrols.keyboard.TouchCharInput;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
 import net.kdt.pojavlaunch.utils.EfficientAndroidLWJGLKeycode;
+import net.kdt.pojavlaunch.utils.JREUtils;
 import net.kdt.pojavlaunch.utils.LwjglGlfwKeycode;
 import net.kdt.pojavlaunch.utils.MCOptionUtils;
 
@@ -234,10 +235,12 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
     protected void onStart() {
         super.onStart();
         CallbackBridge.nativeSetWindowAttrib(LwjglGlfwKeycode.GLFW_VISIBLE, 1);
+        JREUtils.setAudioSuspended(false);
     }
 
     @Override
     protected void onStop() {
+        JREUtils.setAudioSuspended(true);
         CallbackBridge.nativeSetWindowAttrib(LwjglGlfwKeycode.GLFW_VISIBLE, 0);
         super.onStop();
     }

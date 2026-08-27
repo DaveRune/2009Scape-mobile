@@ -171,3 +171,50 @@ JNIEXPORT jint JNICALL Java_net_kdt_pojavlaunch_utils_JREUtils_executeForkedBina
 }
 */
 
+
+#define AL_GAIN 0x100A
+
+typedef void* (*alcGetCurrentContext_t)(void);
+typedef void* (*alcGetContextsDevice_t)(void*);
+typedef void (*alcDeviceSuspend_t)(void*);
+typedef void (*alListenerf_t)(int, float);
+
+static void* openal_handle() {
+	static void* handle = NULL;
+	if (handle == NULL) handle = dlopen("libopenal.so", RTLD_NOLOAD | RTLD_LAZY);
+	return handle;
+}
+
+JNIEXPORT jboolean JNICALL Java_net_kdt_pojavlaunch_utils_JREUtils_setAudioSuspended(JNIEnv *env, jclass clazz, jboolean suspended) {
+	(void) env; (void) clazz;
+	void* handle = openal_handle();
+	if (handle == NULL) {
+		LOGD("setAudioSuspended: libopenal.so is not loaded in this process");
+		return JNI_FALSE;
+	}
+
+	alcGetCurrentContext_t getContext = (alcGetCurrentContext_t) dlsym(handle, "alcGetCurrentContext");
+	alcGetContextsDevice_t getDevice = (alcGetContextsDevice_t) dlsym(handle, "alcGetContextsDevice");
+	alcDeviceSuspend_t pauseDevice = (alcDeviceSuspend_t) dlsym(handle, "alcDevicePauseSOFT");
+	alcDeviceSuspend_t resumeDevice = (alcDeviceSuspend_t) dlsym(handle, "alcDeviceResumeSOFT");
+
+	void* device = NULL;
+	if (getContext != NULL && getDevice != NULL) {
+		void* context = getContext();
+		if (context != NULL) device = getDevice(context);
+	}
+
+	if (device != NULL && pauseDevice != NULL && resumeDevice != NULL) {
+		if (suspended) pauseDevice(device); else resumeDevice(device);
+		return JNI_TRUE;
+	}
+
+	// ALC_SOFT_pause_device is missing, so silence the listener instead
+	alListenerf_t setListenerFloat = (alListenerf_t) dlsym(handle, "alListenerf");
+	if (setListenerFloat == NULL) {
+		LOGD("setAudioSuspended: no way to suspend or silence OpenAL");
+		return JNI_FALSE;
+	}
+	setListenerFloat(AL_GAIN, suspended ? 0.0f : 1.0f);
+	return JNI_TRUE;
+}
