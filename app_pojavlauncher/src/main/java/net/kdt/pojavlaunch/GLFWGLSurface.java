@@ -81,6 +81,10 @@ public class GLFWGLSurface extends View implements GrabListener {
 
     /* Resolution scaler option, allow downsizing a window */
     private final float mScaleFactor = LauncherPreferences.PREF_SCALE_FACTOR/100f;
+    /* The client is told its window is this much smaller than the surface, so it draws its interface bigger */
+    private final float mUiScale = Math.max(1f, LauncherPreferences.PREF_UI_SCALE);
+    /* Touch positions are sent in the client's window space, not the surface's */
+    private final float mTouchScale = mScaleFactor / mUiScale;
     /* Sensitivity, adjusted according to screen size */
     private final double mSensitivityFactor = (1.4 * (1080f/ Tools.getDisplayMetrics((Activity) getContext()).heightPixels));
     /* Use to detect simple and double taps */
@@ -260,7 +264,7 @@ public class GLFWGLSurface extends View implements GrabListener {
 
             // Mouse found
             if(CallbackBridge.isGrabbing()) return false;
-            CallbackBridge.sendCursorPos(   e.getX(i) * mScaleFactor, e.getY(i) * mScaleFactor);
+            CallbackBridge.sendCursorPos(   e.getX(i) * mTouchScale, e.getY(i) * mTouchScale);
             if(e.getToolType(i) == MotionEvent.TOOL_TYPE_STYLUS) sendStylusButton(e);
             return true; //mouse event handled successfully
         }
@@ -270,8 +274,8 @@ public class GLFWGLSurface extends View implements GrabListener {
         //Getting scaled position from the event
         /* Tells if a double tap happened [MOUSE GRAB ONLY]. Doesn't tell where though. */
         if(!CallbackBridge.isGrabbing()) {
-            CallbackBridge.mouseX = (e.getX() * mScaleFactor);
-            CallbackBridge.mouseY = (e.getY() * mScaleFactor);
+            CallbackBridge.mouseX = (e.getX() * mTouchScale);
+            CallbackBridge.mouseY = (e.getY() * mTouchScale);
             //One android click = one MC click
             if(mSingleTapDetector.onTouchEvent(e)){ //
                 CallbackBridge.putMouseEventWithCoords(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT, CallbackBridge.mouseX, CallbackBridge.mouseY);
@@ -496,8 +500,8 @@ public class GLFWGLSurface extends View implements GrabListener {
         updateGrabState(CallbackBridge.isGrabbing());
         switch(event.getActionMasked()) {
             case MotionEvent.ACTION_HOVER_MOVE:
-                CallbackBridge.mouseX = (event.getX(mouseCursorIndex) * mScaleFactor);
-                CallbackBridge.mouseY = (event.getY(mouseCursorIndex) * mScaleFactor);
+                CallbackBridge.mouseX = (event.getX(mouseCursorIndex) * mTouchScale);
+                CallbackBridge.mouseY = (event.getY(mouseCursorIndex) * mTouchScale);
                 CallbackBridge.sendCursorPos(CallbackBridge.mouseX, CallbackBridge.mouseY);
                 return true;
             case MotionEvent.ACTION_SCROLL:
@@ -517,8 +521,8 @@ public class GLFWGLSurface extends View implements GrabListener {
     @RequiresApi(26)
     @Override
     public boolean dispatchCapturedPointerEvent(MotionEvent e) {
-        CallbackBridge.mouseX = (e.getX() * mScaleFactor);
-        CallbackBridge.mouseY = (e.getY() * mScaleFactor);
+        CallbackBridge.mouseX = (e.getX() * mTouchScale);
+        CallbackBridge.mouseY = (e.getY() * mTouchScale);
 
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_MOVE:
@@ -687,8 +691,10 @@ public class GLFWGLSurface extends View implements GrabListener {
             surfaceHeight = (int) (Tools.currentDisplayMetrics.heightPixels - (PREF_INSET_X*2));
         }
 
-        windowWidth = Tools.getDisplayFriendlyRes(surfaceWidth, mScaleFactor);
-        windowHeight = Tools.getDisplayFriendlyRes(surfaceHeight, mScaleFactor);
+        int renderWidth = Tools.getDisplayFriendlyRes(surfaceWidth, mScaleFactor);
+        int renderHeight = Tools.getDisplayFriendlyRes(surfaceHeight, mScaleFactor);
+        windowWidth = Tools.getDisplayFriendlyRes(renderWidth, 1f / mUiScale);
+        windowHeight = Tools.getDisplayFriendlyRes(renderHeight, 1f / mUiScale);
         if(mSurface == null){
             Log.w("MGLSurface", "Attempt to refresh size on null surface");
             return;
@@ -696,12 +702,12 @@ public class GLFWGLSurface extends View implements GrabListener {
         if(LauncherPreferences.PREF_USE_ALTERNATE_SURFACE){
             SurfaceView view = (SurfaceView) mSurface;
             if(view.getHolder() != null){
-                view.getHolder().setFixedSize(windowWidth, windowHeight);
+                view.getHolder().setFixedSize(renderWidth, renderHeight);
             }
         }else{
             TextureView view = (TextureView)mSurface;
             if(view.getSurfaceTexture() != null){
-                view.getSurfaceTexture().setDefaultBufferSize(windowWidth, windowHeight);
+                view.getSurfaceTexture().setDefaultBufferSize(renderWidth, renderHeight);
             }
         }
 

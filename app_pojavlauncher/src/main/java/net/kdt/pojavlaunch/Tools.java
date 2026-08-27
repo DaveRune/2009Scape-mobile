@@ -167,6 +167,7 @@ public final class Tools {
         javaArgList.add("-DclientHomeOverride="+gamedir);
         javaArgList.add("-DglfwWidth="+CallbackBridge.windowWidth);
         javaArgList.add("-DglfwHeight="+CallbackBridge.windowHeight);
+        javaArgList.add("-Dpojav.uiScale="+Math.max(1f, LauncherPreferences.PREF_UI_SCALE));
         javaArgList.add("-cp");
         javaArgList.add(getLWJGL3ClassPath()+":"+Tools.DIR_DATA+"/rt4.jar");
         javaArgList.add(RT4_MAIN_CLASS);
