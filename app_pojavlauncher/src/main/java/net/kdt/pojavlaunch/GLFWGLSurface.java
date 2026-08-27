@@ -56,6 +56,10 @@ public class GLFWGLSurface extends View implements GrabListener {
 
     float startX = 0;
     float startY = 0;
+    private float mPanTravelX = 0;
+    private float mPanTravelY = 0;
+    private int mPanPointerId = -1;
+    private final float mPanStep = Math.max(1f, Tools.dpToPx(PAN_STEP_DP) / LauncherPreferences.PREF_CAMERA_PAN_SENSITIVITY);
     private ScaleGestureDetector scaleGestureDetector;
     private GestureDetector longPressDetector;
 
@@ -114,6 +118,10 @@ public class GLFWGLSurface extends View implements GrabListener {
     private float mScrollLastInitialX, mScrollLastInitialY;
     /* How much distance a finger has to go for touch sloppiness to be disabled */
     public static final int FINGER_STILL_THRESHOLD = (int) Tools.dpToPx(9);
+    /* Finger travel that earns one camera rotation step at the default sensitivity */
+    private static final float PAN_STEP_DP = 5f;
+    /* Stops a pointer jump turning into a spin */
+    private static final int MAX_PAN_STEPS_PER_EVENT = 24;
     /* How much distance a finger has to go to scroll */
     public static final int FINGER_SCROLL_THRESHOLD = (int) Tools.dpToPx(6);
     /* Whether the button was triggered, used by the handler */
@@ -276,21 +284,20 @@ public class GLFWGLSurface extends View implements GrabListener {
 
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_MOVE:
-                // Maybe here we do camera panning?
-                // Calculate the distance moved
-                float dx = (e.getX()) - startX;
-                float dy = (e.getY()) - startY;
+                int panIndex = mPanPointerId == -1 ? -1 : e.findPointerIndex(mPanPointerId);
+                if(panIndex != -1) {
+                    float dx = e.getX(panIndex) - startX;
+                    float dy = e.getY(panIndex) - startY;
 
-                // Do something with dx and dy here, like adjusting the camera position
-                try {
-                    panCamera(dx, dy);
-                } catch (InterruptedException ex) {
-                    throw new RuntimeException(ex);
+                    try {
+                        panCamera(dx, dy);
+                    } catch (InterruptedException ex) {
+                        throw new RuntimeException(ex);
+                    }
+
+                    startX = e.getX(panIndex);
+                    startY = e.getY(panIndex);
                 }
-
-                // Update start position
-                startX = e.getX();
-                startY = e.getY();
 
 
                 int pointerCount = e.getPointerCount();
@@ -348,6 +355,9 @@ public class GLFWGLSurface extends View implements GrabListener {
             case MotionEvent.ACTION_DOWN: // 0
                 startX = e.getX();
                 startY = e.getY();
+                mPanPointerId = e.getPointerId(0);
+                mPanTravelX = 0;
+                mPanTravelY = 0;
                 hudKeyHandled = handleGuiBar((int)e.getX(), (int) e.getY());
                 boolean isTouchInHotbar = hudKeyHandled != -1;
                 if (isTouchInHotbar) {
@@ -377,14 +387,28 @@ public class GLFWGLSurface extends View implements GrabListener {
                 mLastHotbarKey = hudKeyHandled;
                 break;
 
+            case MotionEvent.ACTION_POINTER_UP: // 6
+                if(e.getPointerId(e.getActionIndex()) == mPanPointerId) {
+                    mPanPointerId = -1;
+                    mPanTravelX = 0;
+                    mPanTravelY = 0;
+                }
+                break;
+
             case MotionEvent.ACTION_UP: // 1
                 // End of drag, reset the start position
                 startX = 0;
                 startY = 0;
+                mPanPointerId = -1;
+                mPanTravelX = 0;
+                mPanTravelY = 0;
                 break;
             case MotionEvent.ACTION_CANCEL: // 3
                 mShouldBeDown = false;
                 mCurrentPointerID = -1;
+                mPanPointerId = -1;
+                mPanTravelX = 0;
+                mPanTravelY = 0;
 
                 hudKeyHandled = handleGuiBar((int)e.getX(), (int) e.getY());
                 isTouchInHotbar = hudKeyHandled != -1;
@@ -420,24 +444,26 @@ public class GLFWGLSurface extends View implements GrabListener {
     }
 
     private void panCamera(float dx, float dy) throws InterruptedException {
-        //Log.i("downthecrop-pan","dx: " +dx + " dy: " + dy);
-        final float threshold = 8.0f; // adjust this value as needed to control the sensitivity of the panning
+        mPanTravelX += dx;
+        mPanTravelY += dy;
 
-        // Check horizontal panning
-        if(dx > threshold) {
-            // Finger moved to the right, pan camera to the right
-            AWTInputBridge.sendKey((char)AWTInputEvent.VK_RIGHT, AWTInputEvent.VK_RIGHT);
-        } else if(dx < -threshold) {
-            AWTInputBridge.sendKey((char)AWTInputEvent.VK_LEFT, AWTInputEvent.VK_LEFT);
+        int horizontalSteps = (int) (mPanTravelX / mPanStep);
+        if(horizontalSteps != 0) {
+            mPanTravelX -= horizontalSteps * mPanStep;
+            sendPanKey(horizontalSteps > 0 ? AWTInputEvent.VK_RIGHT : AWTInputEvent.VK_LEFT, Math.abs(horizontalSteps));
         }
 
-        // Check vertical panning
-        if(dy > threshold) {
-            // Finger moved down, pan camera up
-            AWTInputBridge.sendKey((char)AWTInputEvent.VK_UP, AWTInputEvent.VK_UP);
-        } else if(dy < -threshold) {
-            // Finger moved up, pan camera down
-            AWTInputBridge.sendKey((char)AWTInputEvent.VK_DOWN, AWTInputEvent.VK_DOWN);
+        int verticalSteps = (int) (mPanTravelY / mPanStep);
+        if(verticalSteps != 0) {
+            mPanTravelY -= verticalSteps * mPanStep;
+            boolean upwards = LauncherPreferences.PREF_CAMERA_PAN_INVERT_Y != (verticalSteps > 0);
+            sendPanKey(upwards ? AWTInputEvent.VK_UP : AWTInputEvent.VK_DOWN, Math.abs(verticalSteps));
+        }
+    }
+
+    private void sendPanKey(int keycode, int repeats) {
+        for(int i = Math.min(repeats, MAX_PAN_STEPS_PER_EVENT); i > 0; i--) {
+            AWTInputBridge.sendKey((char) keycode, keycode);
         }
     }
 

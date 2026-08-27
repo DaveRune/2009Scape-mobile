@@ -307,6 +307,10 @@
 
     <string name="preference_back_title">Back to the last screen</string>
     <string name="settings_close">Close settings</string>
+    <string name="preference_camera_pan_sensitivity_title">Camera drag sensitivity</string>
+    <string name="preference_camera_pan_sensitivity_description">How far a finger travels before the camera turns. Higher turns sooner and faster.</string>
+    <string name="preference_camera_pan_invert_y_title">Invert camera drag Y axis</string>
+    <string name="preference_camera_pan_invert_y_description">Drag up to look up instead of down.</string>
     <string name="gles_hack_none">Don\'t shrink textures</string>
     <string name="gles_hack_always">Divides all textures by 2</string>
     <string name="gles_hack_sometimes">Divides big textures by /2 or /4</string>

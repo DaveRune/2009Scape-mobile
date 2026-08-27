@@ -22,6 +22,7 @@ public class LauncherPreferenceControlFragment extends LauncherPreferenceFragmen
         int mouseScale = (int) LauncherPreferences.PREF_MOUSESCALE;
         int gyroSampleRate = LauncherPreferences.PREF_GYRO_SAMPLE_RATE;
         float mouseSpeed = LauncherPreferences.PREF_MOUSESPEED;
+        float cameraPanSensitivity = LauncherPreferences.PREF_CAMERA_PAN_SENSITIVITY;
         float gyroSpeed = LauncherPreferences.PREF_GYRO_SENSITIVITY;
         float joystickDeadzone = LauncherPreferences.PREF_DEADZONE_SCALE;
 
@@ -43,6 +44,11 @@ public class LauncherPreferenceControlFragment extends LauncherPreferenceFragmen
         seek4.setRange(25, 300);
         seek4.setValue(mouseScale);
         seek4.setSuffix(" %");
+
+        CustomSeekBarPreference panSeek = findPreference("cameraPanSensitivity");
+        panSeek.setRange(25, 300);
+        panSeek.setValue((int)(cameraPanSensitivity * 100f));
+        panSeek.setSuffix(" %");
 
         CustomSeekBarPreference seek6 = findPreference("mousespeed");
         seek6.setRange(25, 300);

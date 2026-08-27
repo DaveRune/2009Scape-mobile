@@ -30,6 +30,21 @@
             android:title="@string/mcl_disable_swap_hand" />
 
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:key="cameraPanSensitivity"
+            android:summary="@string/preference_camera_pan_sensitivity_description"
+            android:title="@string/preference_camera_pan_sensitivity_title"
+            android:icon="@drawable/ic_setting_mouse_speed"
+            app2:seekBarIncrement="5"
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
+
+        <SwitchPreference
+            android:key="cameraPanInvertY"
+            android:defaultValue="false"
+            android:summary="@string/preference_camera_pan_invert_y_description"
+            android:title="@string/preference_camera_pan_invert_y_title" />
+
+        <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
             android:key="timeLongPressTrigger"
             android:summary="@string/mcl_setting_subtitle_longpresstrigger"
             android:title="@string/mcl_setting_title_longpresstrigger"
