@@ -18,6 +18,7 @@ import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -61,8 +62,11 @@ public class MyDialogFragment extends DialogFragment {
 
         final Button loadConfig = dialog.findViewById(R.id.loadConfig);
         final Button loadPlugin = dialog.findViewById(R.id.loadPlugin);
+        final ImageButton closeButton = dialog.findViewById(R.id.settingsClose);
         pluginList = dialog.findViewById(R.id.pluginsList);
         addPluginsToList();
+
+        closeButton.setOnClickListener(view -> dismiss());
 
         loadConfig.setOnTouchListener((v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
@@ -91,6 +95,12 @@ public class MyDialogFragment extends DialogFragment {
         ExtraCore.addExtraListener(ExtraConstants.BACK_PREFERENCE, mBackPreferenceListener);
 
         return dialog;
+    }
+
+    @Override
+    public void onDestroy() {
+        ExtraCore.removeExtraListenerFromValue(ExtraConstants.BACK_PREFERENCE, mBackPreferenceListener);
+        super.onDestroy();
     }
 
     /* Listener for the back button in settings */

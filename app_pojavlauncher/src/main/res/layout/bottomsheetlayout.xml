@@ -6,6 +6,23 @@
     android:layout_height="match_parent"
     android:background="@drawable/dialoguebkg">
 
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <ImageButton
+            android:id="@+id/settingsClose"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="end"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/settings_close"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_close_white" />
+
+    </FrameLayout>
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent">
