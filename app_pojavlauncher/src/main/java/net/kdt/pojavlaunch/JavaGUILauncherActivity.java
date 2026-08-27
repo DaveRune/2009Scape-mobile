@@ -211,7 +211,6 @@ public class JavaGUILauncherActivity extends BaseActivity implements View.OnTouc
             }
 
             // No skip detection
-            openLogOutput(null);
             new Thread(() -> {
                 try {
                     final int exit = launchJavaRuntime(runtime, "");
