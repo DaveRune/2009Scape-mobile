@@ -627,10 +627,23 @@ public class GLFWGLSurface extends View implements GrabListener {
         return (int)((mGuiScale * input)/ mScaleFactor);
     }
 
+    @Override
+    protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+        super.onSizeChanged(width, height, oldWidth, oldHeight);
+        refreshSize();
+    }
+
     /** Called when the size need to be set at any point during the surface lifecycle **/
     public void refreshSize(){
-        windowWidth = Tools.getDisplayFriendlyRes((int) (Tools.currentDisplayMetrics.widthPixels - (PREF_INSET_X*2)), mScaleFactor);
-        windowHeight = Tools.getDisplayFriendlyRes((int) (Tools.currentDisplayMetrics.heightPixels - (PREF_INSET_X*2)), mScaleFactor);
+        int surfaceWidth = getWidth();
+        int surfaceHeight = getHeight();
+        if(surfaceWidth == 0 || surfaceHeight == 0){
+            surfaceWidth = (int) (Tools.currentDisplayMetrics.widthPixels - (PREF_INSET_X*2));
+            surfaceHeight = (int) (Tools.currentDisplayMetrics.heightPixels - (PREF_INSET_X*2));
+        }
+
+        windowWidth = Tools.getDisplayFriendlyRes(surfaceWidth, mScaleFactor);
+        windowHeight = Tools.getDisplayFriendlyRes(surfaceHeight, mScaleFactor);
         if(mSurface == null){
             Log.w("MGLSurface", "Attempt to refresh size on null surface");
             return;
