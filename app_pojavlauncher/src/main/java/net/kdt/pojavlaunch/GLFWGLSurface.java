@@ -105,6 +105,7 @@ public class GLFWGLSurface extends View implements GrabListener {
     private int mLastPointerCount = 0;
     /* Previous MotionEvent position, not scale */
     private float mPrevX, mPrevY;
+    private int mStylusButton = -1;
     /* PointerID used for the moving camera */
     private int mCurrentPointerID = -1000;
     /* Initial first pointer positions non-scaled, used to test touch sloppiness */
@@ -252,6 +253,7 @@ public class GLFWGLSurface extends View implements GrabListener {
             // Mouse found
             if(CallbackBridge.isGrabbing()) return false;
             CallbackBridge.sendCursorPos(   e.getX(i) * mScaleFactor, e.getY(i) * mScaleFactor);
+            if(e.getToolType(i) == MotionEvent.TOOL_TYPE_STYLUS) sendStylusButton(e);
             return true; //mouse event handled successfully
         }
 
@@ -556,6 +558,23 @@ public class GLFWGLSurface extends View implements GrabListener {
 
         // Some events will be generated an infinite number of times when no consumed
         return (event.getFlags() & KeyEvent.FLAG_FALLBACK) == KeyEvent.FLAG_FALLBACK;
+    }
+
+    private void sendStylusButton(MotionEvent e) {
+        switch (e.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                mStylusButton = (e.getButtonState() & MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
+                        ? LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT
+                        : LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT;
+                sendMouseButton(mStylusButton, true);
+                break;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                if(mStylusButton == -1) break;
+                sendMouseButton(mStylusButton, false);
+                mStylusButton = -1;
+                break;
+        }
     }
 
     /** Convert the mouse button, then send it
