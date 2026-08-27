@@ -40,6 +40,7 @@ public class LauncherPreferences {
     public static float PREF_MOUSESPEED = 1f;
     public static float PREF_CAMERA_PAN_SENSITIVITY = 1f;
     public static boolean PREF_CAMERA_PAN_INVERT_Y = false;
+    public static float PREF_ZOOM_SENSITIVITY = 1f;
     public static float PREF_INSET_X = 0f;
     public static int PREF_RAM_ALLOCATION;
     public static String PREF_DEFAULT_RUNTIME;
@@ -78,6 +79,7 @@ public class LauncherPreferences {
         PREF_MOUSESPEED = ((float)DEFAULT_PREF.getInt("mousespeed",100))/100f;
         PREF_CAMERA_PAN_SENSITIVITY = ((float)DEFAULT_PREF.getInt("cameraPanSensitivity", 100))/100f;
         PREF_CAMERA_PAN_INVERT_Y = DEFAULT_PREF.getBoolean("cameraPanInvertY", false);
+        PREF_ZOOM_SENSITIVITY = ((float)DEFAULT_PREF.getInt("zoomSensitivity", 100))/100f;
         PREF_INSET_X = DEFAULT_PREF.getInt("xinset", 0)*2;
         PREF_HIDE_SIDEBAR = DEFAULT_PREF.getBoolean("hideSidebar", false);
         PREF_IGNORE_NOTCH = DEFAULT_PREF.getBoolean("ignoreNotch", false);

@@ -56,6 +56,8 @@ public class GLFWGLSurface extends View implements GrabListener {
 
     float startX = 0;
     float startY = 0;
+    private float mZoomTravel = 0;
+    private final float mZoomStep = Math.max(1f, Tools.dpToPx(ZOOM_STEP_DP) / LauncherPreferences.PREF_ZOOM_SENSITIVITY);
     private float mPanTravelX = 0;
     private float mPanTravelY = 0;
     private int mPanPointerId = -1;
@@ -126,6 +128,10 @@ public class GLFWGLSurface extends View implements GrabListener {
     private static final float PAN_STEP_DP = 5f;
     /* Stops a pointer jump turning into a spin */
     private static final int MAX_PAN_STEPS_PER_EVENT = 24;
+    /* Pinch distance that earns one zoom step at the default sensitivity */
+    private static final float ZOOM_STEP_DP = 16f;
+    /* Stops a pinch jump running the zoom away */
+    private static final int MAX_ZOOM_STEPS_PER_EVENT = 8;
     /* How much distance a finger has to go to scroll */
     public static final int FINGER_SCROLL_THRESHOLD = (int) Tools.dpToPx(6);
     /* Whether the button was triggered, used by the handler */
@@ -293,10 +299,16 @@ public class GLFWGLSurface extends View implements GrabListener {
                     float dx = e.getX(panIndex) - startX;
                     float dy = e.getY(panIndex) - startY;
 
-                    try {
-                        panCamera(dx, dy);
-                    } catch (InterruptedException ex) {
-                        throw new RuntimeException(ex);
+                    if(scaleGestureDetector.isInProgress()) {
+                        // Follow the finger without turning, so lifting one does not arrive as one huge delta
+                        mPanTravelX = 0;
+                        mPanTravelY = 0;
+                    } else {
+                        try {
+                            panCamera(dx, dy);
+                        } catch (InterruptedException ex) {
+                            throw new RuntimeException(ex);
+                        }
                     }
 
                     startX = e.getX(panIndex);
@@ -629,32 +641,34 @@ public class GLFWGLSurface extends View implements GrabListener {
     }
 
 
-    public static class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
 
         @Override
         public boolean onScale(ScaleGestureDetector detector) {
-            Log.i("downthecrop","SCALE EVENT!");
-            float scaleFactor = detector.getScaleFactor();
-            if (scaleFactor > 1) { //Send F4 To Zoom Out
-                AWTInputBridge.sendKey((char)AWTInputEvent.VK_F3, AWTInputEvent.VK_F3);
-            } else { //116 F3 To Zoom In
-                AWTInputBridge.sendKey((char)AWTInputEvent.VK_F4,AWTInputEvent.VK_F4);
+            mZoomTravel += detector.getCurrentSpan() - detector.getPreviousSpan();
+
+            int steps = (int) (mZoomTravel / mZoomStep);
+            if(steps == 0) return true;
+            mZoomTravel -= steps * mZoomStep;
+
+            int keycode = steps > 0 ? AWTInputEvent.VK_F3 : AWTInputEvent.VK_F4;
+            for(int i = Math.min(Math.abs(steps), MAX_ZOOM_STEPS_PER_EVENT); i > 0; i--) {
+                AWTInputBridge.sendKey((char) keycode, keycode);
             }
             return true;
         }
 
         @Override
         public boolean onScaleBegin(ScaleGestureDetector detector) {
+            mZoomTravel = 0;
             return true;
         }
 
         @Override
         public void onScaleEnd(ScaleGestureDetector detector) {
-
+            mZoomTravel = 0;
         }
     }
-
-
 
     /** @return the hotbar key, given the position. -1 if no key are pressed */
     public int handleGuiBar(int x, int y) {

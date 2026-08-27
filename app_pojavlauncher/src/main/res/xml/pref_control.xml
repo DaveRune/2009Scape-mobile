@@ -38,6 +38,15 @@
             app2:selectable="false"
             app2:showSeekBarValue="true" />
 
+        <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:key="zoomSensitivity"
+            android:summary="@string/preference_zoom_sensitivity_description"
+            android:title="@string/preference_zoom_sensitivity_title"
+            android:icon="@drawable/ic_setting_screen_resolution"
+            app2:seekBarIncrement="5"
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
+
         <SwitchPreference
             android:key="cameraPanInvertY"
             android:defaultValue="false"

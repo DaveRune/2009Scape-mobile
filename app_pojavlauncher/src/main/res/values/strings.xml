@@ -311,6 +311,8 @@
     <string name="preference_camera_pan_sensitivity_description">How far a finger travels before the camera turns. Higher turns sooner and faster.</string>
     <string name="preference_ui_scale_title">Interface scale</string>
     <string name="preference_ui_scale_description">Scales the interface without lowering the game resolution.</string>
+    <string name="preference_zoom_sensitivity_title">Pinch zoom sensitivity</string>
+    <string name="preference_zoom_sensitivity_description">How far a pinch travels before the camera zooms.</string>
     <string name="preference_camera_pan_invert_y_title">Invert camera drag Y axis</string>
     <string name="preference_camera_pan_invert_y_description">Drag up to look up instead of down.</string>
     <string name="gles_hack_none">Don\'t shrink textures</string>
