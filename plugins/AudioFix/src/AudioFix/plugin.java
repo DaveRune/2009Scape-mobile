@@ -16,7 +16,7 @@ import rt4.client;
 /// sound channel believes it is permanently full and never writes, while music writes on a fixed timer and
 /// drifts thousands of buffers ahead until it stops. This corrects the target the channel writes towards,
 /// using what OpenAL actually reports, and leaves the client's own audio thread to do the writing.
-@PluginMeta(author = "Dave", description = "Repairs OpenAL audio so sound effects play and music does not run away", version = 3.0)
+@PluginMeta(author = "Dave", description = "Repairs OpenAL audio so sound effects play and music does not run away", version = 3.1)
 public class plugin extends Plugin {
 
     private static final String CHANNEL_CLASS = "rt4.OpenALAudioChannel";
@@ -43,10 +43,10 @@ public class plugin extends Plugin {
             }
             if (!isOpenAL(client.musicChannel) || !isOpenAL(client.soundChannel)) return;
             if (!prepare()) return;
-            separateSources(client.musicChannel, client.soundChannel);
             ready = true;
         }
 
+        separateSources(client.musicChannel, client.soundChannel);
         steer(client.musicChannel);
         steer(client.soundChannel);
     }
@@ -72,15 +72,23 @@ public class plugin extends Plugin {
         }
     }
 
-    /// Each channel builds its own OpenAL context, and every fresh context issues source number 1,
-    /// so without this both channels write into the same source.
+    /// Each channel builds its own OpenAL context, and every fresh context issues source number 1, so
+    /// without this both channels write into the same source. A channel that runs dry gets closed and
+    /// reopened by the client, which builds it a fresh context and source, so this is checked every frame
+    /// rather than done once at startup.
     private void separateSources(AudioChannel music, AudioChannel sound) {
         try {
             Field contextField = music.getClass().getDeclaredField("audioContext");
             contextField.setAccessible(true);
 
             long musicContext = contextField.getLong(music);
-            if (musicContext == contextField.getLong(sound)) return;
+            if (musicContext == contextField.getLong(sound)) {
+                if (ALC10.alcGetCurrentContext() != musicContext) {
+                    ALC10.alcMakeContextCurrent(musicContext);
+                    System.out.println("AudioFix: current context had drifted, put back to the shared one.");
+                }
+                return;
+            }
 
             ALC10.alcMakeContextCurrent(musicContext);
             int newSource = AL10.alGenSources();
