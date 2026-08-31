@@ -4,12 +4,12 @@ plugins {
 
 static def getDate() { return new Date().format('yyyyMMdd') }
 
-static def getDateSeconds() {
-    if (System.getenv("GITHUB_ACTIONS") == "true") {
-        return 9934841 + Integer.parseInt(System.getenv("GITHUB_RUN_NUMBER"))
-    } else {
-        return 172005
-    }
+// Android refuses to install a build numbered lower than the one already on the device.
+// The project this is forked from numbers its releases 9934841 plus the CI run number, so this
+// sits above that range to install over them. Raise it for every release.
+// The name must not match a property of the defaultConfig block, or that wins and this is ignored.
+static def getReleaseNumber() {
+    return 9950000
 }
 
 def getVersionName = {
@@ -66,7 +66,10 @@ def getVersionName = {
         }
     }
 
-    return TAG_STRING.trim().replace("-g", "-") + "-" + BRANCH.toString().trim()
+    // A release is cut from master, and "hd-3.0-master" is not a version anybody wants to read.
+    String NAME = TAG_STRING.trim().replace("-g", "-")
+    String BRANCH_NAME = BRANCH.toString().trim()
+    return BRANCH_NAME == "master" ? NAME : NAME + "-" + BRANCH_NAME
 }
 
 configurations {
@@ -101,7 +104,7 @@ android {
         applicationId "net.kdt.pojavlaunch"
         minSdkVersion 21
         targetSdkVersion 33
-        versionCode getDateSeconds()
+        versionCode getReleaseNumber()
         versionName getVersionName()
         multiDexEnabled true //important
     }
