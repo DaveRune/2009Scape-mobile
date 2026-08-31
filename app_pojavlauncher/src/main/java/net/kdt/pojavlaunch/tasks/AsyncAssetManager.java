@@ -10,6 +10,7 @@ import android.util.Log;
 
 import com.kdt.mcgui.ProgressLayout;
 
+import net.kdt.pojavlaunch.BuildConfig;
 import net.kdt.pojavlaunch.Tools;
 import net.kdt.pojavlaunch.multirt.MultiRTUtils;
 
@@ -85,7 +86,7 @@ public class AsyncAssetManager {
                 // we repack them to a single file here
                 unpackComponent(ctx, "lwjgl3", false);
                 unpackComponent(ctx, "security", true);
-                Tools.copyAssetFile(ctx,"rt4.jar",Tools.DIR_DATA, false); // Change this to true if you're working on client features.
+                unpackClient(ctx);
                 Tools.copyAssetFile(ctx,"config.json",Tools.DIR_DATA, false);
 
                 // Unzip the plugins for use.
@@ -139,6 +140,26 @@ public class AsyncAssetManager {
 
     public static void extractPluginZip(File plugin) throws IOException {
         Tools.ZipTool.unzip(plugin, new File(Tools.DIR_DATA + "/plugins/"));
+    }
+
+    /**
+     * The client jar is replaced whenever the launcher version changes, so an app update always
+     * brings its own client with it. Without this an existing install keeps whichever client it
+     * first unpacked, forever, and gets a new launcher driving an old client.
+     */
+    private static void unpackClient(Context ctx) throws IOException {
+        File jar = new File(Tools.DIR_DATA, "rt4.jar");
+        File versionFile = new File(Tools.DIR_DATA, "rt4.jar.version");
+        String shipped = BuildConfig.VERSION_NAME;
+
+        if (jar.exists() && versionFile.exists() && shipped.equals(Tools.read(versionFile.getAbsolutePath()))) {
+            Log.i("UnpackPrep", "rt4.jar: Client is up-to-date with the launcher, continuing...");
+            return;
+        }
+
+        Log.i("UnpackPrep", "rt4.jar: Unpacking the client shipped with " + shipped);
+        Tools.copyAssetFile(ctx, "rt4.jar", Tools.DIR_DATA, true);
+        Tools.write(versionFile.getAbsolutePath(), shipped);
     }
 
     private static void unpackComponent(Context ctx, String component, boolean privateDirectory) throws IOException {
