@@ -1,6 +1,5 @@
 package net.kdt.pojavlaunch;
 
-import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_DISABLE_SWAP_HAND;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_INSET_X;
 import static net.kdt.pojavlaunch.utils.MCOptionUtils.getMcScale;
 import static org.lwjgl.glfw.CallbackBridge.sendKeyPress;
@@ -151,7 +150,6 @@ public class GLFWGLSurface extends View implements GrabListener {
     private final Handler mHandler = new Handler(Looper.getMainLooper()) {
         public void handleMessage(Message msg) {
             if(msg.what == MSG_LEFT_MOUSE_BUTTON_CHECK) {
-                if (LauncherPreferences.PREF_DISABLE_GESTURES) return;
                 float x = CallbackBridge.mouseX;
                 float y = CallbackBridge.mouseY;
                 if (CallbackBridge.isGrabbing() &&
@@ -344,7 +342,6 @@ public class GLFWGLSurface extends View implements GrabListener {
                     }
 
                     // Scrolling feature
-                    if(LauncherPreferences.PREF_DISABLE_GESTURES) break;
                     // The pointer count can never be 0, and it is not 1, therefore it is >= 2
                     float scrollCentreX = pointerCentreX(e);
                     float scrollCentreY = pointerCentreY(e);
@@ -402,7 +399,7 @@ public class GLFWGLSurface extends View implements GrabListener {
                 boolean isTouchInHotbar = hudKeyHandled != -1;
                 if (isTouchInHotbar) {
                     sendKeyPress(hudKeyHandled);
-                    if(hasDoubleTapped && hudKeyHandled == mLastHotbarKey && !PREF_DISABLE_SWAP_HAND){
+                    if(hasDoubleTapped && hudKeyHandled == mLastHotbarKey){
                         //Prevent double tapping Event on two different slots
                         sendKeyPress(LwjglGlfwKeycode.GLFW_KEY_F);
                     }
@@ -473,8 +470,7 @@ public class GLFWGLSurface extends View implements GrabListener {
                 mHandler.removeMessages(MSG_LEFT_MOUSE_BUTTON_CHECK);
 
                 // In case of a short click, just send a quick right click
-                if(!LauncherPreferences.PREF_DISABLE_GESTURES &&
-                        MathUtils.dist(mInitialX, mInitialY, CallbackBridge.mouseX, CallbackBridge.mouseY) < FINGER_STILL_THRESHOLD){
+                if(MathUtils.dist(mInitialX, mInitialY, CallbackBridge.mouseX, CallbackBridge.mouseY) < FINGER_STILL_THRESHOLD){
                     sendMouseButton(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT, true);
                     sendMouseButton(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT, false);
                 }

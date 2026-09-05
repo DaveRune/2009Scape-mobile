@@ -106,7 +106,7 @@ public class Touchpad extends FrameLayout implements GrabListener{
 
             case MotionEvent.ACTION_MOVE: // 2
                 //Scrolling feature
-                if (!LauncherPreferences.PREF_DISABLE_GESTURES && !CallbackBridge.isGrabbing() && event.getPointerCount() >= 2) {
+                if (!CallbackBridge.isGrabbing() && event.getPointerCount() >= 2) {
                     int hScroll =  ((int) (event.getX() - mScrollLastInitialX)) / FINGER_SCROLL_THRESHOLD;
                     int vScroll = ((int) (event.getY() - mScrollLastInitialY)) / FINGER_SCROLL_THRESHOLD;
 

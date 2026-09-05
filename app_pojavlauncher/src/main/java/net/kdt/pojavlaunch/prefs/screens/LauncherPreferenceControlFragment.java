@@ -101,7 +101,6 @@ public class LauncherPreferenceControlFragment extends LauncherPreferenceFragmen
         findPreference("scrollInvert").setSummary(LauncherPreferences.PREF_SCROLL_INVERT
                 ? R.string.preference_scroll_invert_up
                 : R.string.preference_scroll_invert_down);
-        findPreference("timeLongPressTrigger").setVisible(!LauncherPreferences.PREF_DISABLE_GESTURES);
         findPreference("gyroSensitivity").setVisible(LauncherPreferences.PREF_ENABLE_GYRO);
         findPreference("gyroSampleRate").setVisible(LauncherPreferences.PREF_ENABLE_GYRO);
         findPreference("gyroInvertX").setVisible(LauncherPreferences.PREF_ENABLE_GYRO);
