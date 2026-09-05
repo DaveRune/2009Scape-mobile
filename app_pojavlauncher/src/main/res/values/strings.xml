@@ -306,6 +306,10 @@
     <string name="preference_camera_pan_sensitivity_title">Camera drag sensitivity</string>
     <string name="preference_camera_pan_sensitivity_description">How far a finger travels before the camera turns. Higher turns sooner and faster.</string>
     <string name="preference_ui_scale_title">Interface scale</string>
+    <string name="preference_keep_running_background_title">Keep running in the background</string>
+    <string name="preference_keep_running_background_description">Keep the game running and playing sound when minimised. Requires a persistent notification.</string>
+    <string name="preference_show_system_bars_title">Show the system UI</string>
+    <string name="preference_show_system_bars_description">Keep the status bar, back, home and recents buttons on screen.</string>
     <string name="preference_ui_scale_description">Scales the interface without lowering the game resolution.</string>
     <string name="preference_zoom_sensitivity_title">Pinch zoom sensitivity</string>
     <string name="preference_zoom_sensitivity_description">How far a pinch travels before the camera zooms.</string>
@@ -333,6 +337,8 @@
     <string name="migrated_profile_str">%s version configuration</string>
     <string name="color_default_hex" translatable="false">FFFF0000</string>
     <string name="notif_channel_name">General</string>
+    <string name="notif_channel_game_name">Game</string>
+    <string name="notif_game_running">Running in the background</string>
     <string name="notif_channel_id" translatable="false">channel_id</string>
     <string name="lazy_service_default_title">Pojav Foreground Service</string>
     <string name="lazy_service_default_description">The service is used to perform long running operations</string>

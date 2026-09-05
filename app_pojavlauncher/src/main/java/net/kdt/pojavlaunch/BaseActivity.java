@@ -6,6 +6,7 @@ import androidx.appcompat.app.*;
 import net.kdt.pojavlaunch.utils.*;
 
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_IGNORE_NOTCH;
+import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_SHOW_SYSTEM_BARS;
 
 public abstract class BaseActivity extends AppCompatActivity {
 
@@ -24,7 +25,7 @@ public abstract class BaseActivity extends AppCompatActivity {
 
     /** @return Whether the activity should be set as a fullscreen one */
     public boolean setFullscreen(){
-        return true;
+        return !PREF_SHOW_SYSTEM_BARS;
     }
 
 

@@ -3,10 +3,14 @@ package net.kdt.pojavlaunch.prefs.screens;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_NOTCH_SIZE;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_SCALE_FACTOR;
 
+import android.Manifest;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.preference.SwitchPreference;
 import androidx.preference.SwitchPreferenceCompat;
 
@@ -49,6 +53,15 @@ public class LauncherPreferenceVideoFragment extends LauncherPreferenceFragment 
     public void onSharedPreferenceChanged(SharedPreferences p, String s) {
         super.onSharedPreferenceChanged(p, s);
         computeVisibility();
+        if("keepRunningBackground".equals(s) && LauncherPreferences.PREF_KEEP_RUNNING_BACKGROUND)
+            askForNotificationPermission();
+    }
+
+    /** The service that keeps the game running shows a notification, and Android 13 hides it without this permission. */
+    private void askForNotificationPermission() {
+        if(Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        if(ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return;
+        ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.POST_NOTIFICATIONS}, 0);
     }
 
     private void computeVisibility(){

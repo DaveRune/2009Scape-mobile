@@ -5,6 +5,20 @@
     <net.kdt.pojavlaunch.prefs.BackButtonPreference/>
 
     <PreferenceCategory android:title="Video settings" >
+        <androidx.preference.SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="keepRunningBackground"
+            android:summary="@string/preference_keep_running_background_description"
+            android:title="@string/preference_keep_running_background_title"
+            />
+
+        <androidx.preference.SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="showSystemBars"
+            android:summary="@string/preference_show_system_bars_description"
+            android:title="@string/preference_show_system_bars_title"
+            />
+
         <androidx.preference.ListPreference
             android:title="@string/mcl_setting_category_renderer"
             android:key="renderer"

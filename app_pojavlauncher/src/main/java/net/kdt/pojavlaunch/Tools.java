@@ -5,6 +5,7 @@ import static android.os.Build.VERSION_CODES.P;
 import static net.kdt.pojavlaunch.PojavApplication.sExecutorService;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_IGNORE_NOTCH;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_NOTCH_SIZE;
+import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_SHOW_SYSTEM_BARS;
 
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -34,7 +35,10 @@ import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.Insets;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import com.google.gson.Gson;
@@ -318,8 +322,17 @@ public final class Tools {
                     displayMetrics.widthPixels -= PREF_NOTCH_SIZE;
             }
         }
+        if(PREF_SHOW_SYSTEM_BARS) removeSystemBarsFromMetrics(activity, displayMetrics);
         currentDisplayMetrics = displayMetrics;
         return displayMetrics;
+    }
+
+    private static void removeSystemBarsFromMetrics(Activity activity, DisplayMetrics displayMetrics) {
+        WindowInsetsCompat windowInsets = ViewCompat.getRootWindowInsets(activity.getWindow().getDecorView());
+        if(windowInsets == null) return;
+        Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+        displayMetrics.widthPixels -= bars.left + bars.right;
+        displayMetrics.heightPixels -= bars.top + bars.bottom;
     }
 
     public static void setFullscreen(Activity activity, boolean fullscreen) {
@@ -587,7 +600,8 @@ public final class Tools {
             } else {
                 ctx.getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
             }
-            ctx.getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN);
+            if(!PREF_SHOW_SYSTEM_BARS)
+                ctx.getWindow().setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN);
             Tools.updateWindowSize(ctx);
         }
     }

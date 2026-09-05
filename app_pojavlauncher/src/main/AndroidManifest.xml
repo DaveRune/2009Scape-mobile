@@ -17,6 +17,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".PojavApplication"
@@ -84,5 +85,9 @@
             android:screenOrientation="sensorLandscape" />
 
         <service android:name=".services.ProgressService" />
+        <service
+            android:name=".services.GameService"
+            android:exported="false"
+            android:process=":game" />
     </application>
 </manifest>

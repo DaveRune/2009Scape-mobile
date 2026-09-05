@@ -1,6 +1,8 @@
 package net.kdt.pojavlaunch;
 
 import static net.kdt.pojavlaunch.Tools.currentDisplayMetrics;
+import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_KEEP_RUNNING_BACKGROUND;
+import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_SHOW_SYSTEM_BARS;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_INSET_X;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_SUSTAINED_PERFORMANCE;
 import static net.kdt.pojavlaunch.prefs.LauncherPreferences.PREF_USE_ALTERNATE_SURFACE;
@@ -49,6 +51,7 @@ import net.kdt.pojavlaunch.customcontrols.EditorExitable;
 import net.kdt.pojavlaunch.customcontrols.keyboard.LwjglCharSender;
 import net.kdt.pojavlaunch.customcontrols.keyboard.TouchCharInput;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
+import net.kdt.pojavlaunch.services.GameService;
 import net.kdt.pojavlaunch.utils.EfficientAndroidLWJGLKeycode;
 import net.kdt.pojavlaunch.utils.JREUtils;
 import net.kdt.pojavlaunch.utils.LwjglGlfwKeycode;
@@ -96,6 +99,8 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
         // Set the sustained performance mode for available APIs
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
             getWindow().setSustainedPerformanceMode(PREF_SUSTAINED_PERFORMANCE);
+
+        if(PREF_KEEP_RUNNING_BACKGROUND) GameService.startService(this);
 
         ingameControlsEditorArrayAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1, getResources().getStringArray(R.array.menu_customcontrol));
@@ -240,7 +245,7 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
 
     @Override
     protected void onStop() {
-        JREUtils.setAudioSuspended(true);
+        JREUtils.setAudioSuspended(!PREF_KEEP_RUNNING_BACKGROUND);
         CallbackBridge.nativeSetWindowAttrib(LwjglGlfwKeycode.GLFW_VISIBLE, 0);
         super.onStop();
     }
@@ -248,6 +253,7 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if(PREF_KEEP_RUNNING_BACKGROUND) GameService.stopService(this);
         CallbackBridge.removeGrabListener(touchpad);
         CallbackBridge.removeGrabListener(minecraftGLView);
     }
@@ -266,7 +272,10 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
     protected void onPostResume() {
         super.onPostResume();
         if(minecraftGLView != null)  // Useful when backing out of the app
-            Tools.MAIN_HANDLER.postDelayed(() -> minecraftGLView.refreshSize(), 500);
+            Tools.MAIN_HANDLER.postDelayed(() -> {
+                minecraftGLView.refreshSize();
+                if(PREF_SHOW_SYSTEM_BARS) mControlLayout.refreshControlButtonPositions();
+            }, 500);
     }
 
     @Override
