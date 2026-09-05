@@ -142,6 +142,10 @@ public class GLFWGLSurface extends View implements GrabListener {
     private static final float SCROLL_STEP_DP = 28f;
     /* Stops a pointer swap sending a list to its far end */
     private static final int MAX_SCROLL_STEPS_PER_EVENT = 4;
+    /* Keys above the client's own key map, so reporting a touch cannot also press something in the game */
+    private static final int TOUCH_DOWN = AWTInputEvent.VK_F13;
+    private static final int TOUCH_TAP = AWTInputEvent.VK_F14;
+    private static final int TOUCH_UP = AWTInputEvent.VK_F15;
     /* Whether the button was triggered, used by the handler */
     private static boolean triggeredLeftMouseButton = false;
     /* Handle hotbar throw button and mouse mining button */
@@ -189,6 +193,7 @@ public class GLFWGLSurface extends View implements GrabListener {
             @Override
             public void onLongPress(MotionEvent e) {
                 super.onLongPress(e);
+                sendTouchState(TOUCH_UP);
                 CallbackBridge.putMouseEventWithCoords(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT, CallbackBridge.mouseX, CallbackBridge.mouseY);
             }
         });
@@ -294,11 +299,11 @@ public class GLFWGLSurface extends View implements GrabListener {
         if(!CallbackBridge.isGrabbing()) {
             CallbackBridge.mouseX = (e.getX() * mTouchScale);
             CallbackBridge.mouseY = (e.getY() * mTouchScale);
-            //One android click = one MC click
-            if(mSingleTapDetector.onTouchEvent(e) && !mGestureWentMultiTouch){
-                CallbackBridge.putMouseEventWithCoords(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT, CallbackBridge.mouseX, CallbackBridge.mouseY);
-                return true;
-            }
+
+            // Only the client knows what is under the finger, so the TouchDrag plugin decides what a touch means
+            boolean tapped = mSingleTapDetector.onTouchEvent(e) && !mGestureWentMultiTouch;
+            if(action == MotionEvent.ACTION_DOWN) sendTouchState(TOUCH_DOWN);
+            else if(action != MotionEvent.ACTION_MOVE) sendTouchState(tapped ? TOUCH_TAP : TOUCH_UP);
         }
 
         // Check double tap state, used for the hotbar
@@ -482,6 +487,13 @@ public class GLFWGLSurface extends View implements GrabListener {
         longPressDetector.onTouchEvent(e);
 
         return true;
+    }
+
+    /** Reports a touch to the TouchDrag plugin, which is what turns touches into clicks and drags */
+    private void sendTouchState(int keycode) {
+        // The plugin reads whatever the client has under its cursor, so the position has to arrive first
+        if(keycode == TOUCH_DOWN) CallbackBridge.sendCursorPos(CallbackBridge.mouseX, CallbackBridge.mouseY);
+        AWTInputBridge.sendKey((char) keycode, keycode);
     }
 
     /** @return the index of a finger still on the screen once the given one has left, or -1 if it was the last */
