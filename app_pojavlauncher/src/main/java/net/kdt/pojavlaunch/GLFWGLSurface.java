@@ -178,6 +178,13 @@ public class GLFWGLSurface extends View implements GrabListener {
     public void start(){
         System.out.println("Hello.. I can see the inset it: "+PREF_INSET_X);
         scaleGestureDetector = new ScaleGestureDetector(this.getContext(), new ScaleListener());
+        longPressDetector = new GestureDetector(getContext(), new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public void onLongPress(MotionEvent e) {
+                super.onLongPress(e);
+                CallbackBridge.putMouseEventWithCoords(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT, CallbackBridge.mouseX, CallbackBridge.mouseY);
+            }
+        });
         if(LauncherPreferences.PREF_USE_ALTERNATE_SURFACE){
             SurfaceView surfaceView = new SurfaceView(getContext());
             mSurface = surfaceView;
@@ -237,14 +244,6 @@ public class GLFWGLSurface extends View implements GrabListener {
 
                 @Override
                 public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {}
-            });
-
-            longPressDetector = new GestureDetector(getContext(), new GestureDetector.SimpleOnGestureListener() {
-                @Override
-                public void onLongPress(MotionEvent e) {
-                    super.onLongPress(e);
-                    CallbackBridge.putMouseEventWithCoords(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT, CallbackBridge.mouseX, CallbackBridge.mouseY);
-                }
             });
 
             ((ViewGroup)getParent()).addView(textureView);
