@@ -4,6 +4,10 @@ plugins {
 
 static def getDate() { return new Date().format('yyyyMMdd') }
 
+def pluginSources = file("$rootDir/plugins")
+def generatedPluginAssets = file("$buildDir/generated/plugin-assets")
+def clientJar = file("$projectDir/src/main/assets/rt4.jar")
+
 // Android refuses to install a build numbered lower than the one already on the device.
 // The project this is forked from numbers its releases 9934841 plus the CI run number, so this
 // sits above that range to install over them. Raise it for every release.
@@ -171,7 +175,56 @@ android {
     lint {
         abortOnError false
     }
+
+    sourceSets {
+        main {
+            assets.srcDirs += generatedPluginAssets
+        }
+    }
 }
+
+// A plugin with source in this repository is compiled and packed on every build, so the app cannot ship one
+// that is older than the source or miss one that nobody remembered to pack. The packed zips are build output
+// and are never committed. A plugin with no source here, meaning somebody else's, keeps its committed zip.
+task packPlugins {
+    inputs.dir pluginSources
+    outputs.dir generatedPluginAssets
+
+    doLast {
+        delete generatedPluginAssets
+        File packInto = new File(generatedPluginAssets, 'plugins')
+        packInto.mkdirs()
+
+        pluginSources.listFiles({ File candidate -> candidate.isDirectory() } as FileFilter).each { plugin ->
+            File sources = new File(plugin, 'src')
+            if (!sources.isDirectory()) return
+            if (new File(plugin, '.dev-only').exists()) {
+                logger.lifecycle("packPlugins: skipping ${plugin.name}, it is marked as dev only")
+                return
+            }
+
+            Set<File> javaFiles = fileTree(sources) { include '**/*.java' }.files
+            if (javaFiles.isEmpty()) return
+
+            File classes = new File(buildDir, "plugin-classes/${plugin.name}")
+            delete classes
+            classes.mkdirs()
+
+            exec {
+                executable org.gradle.internal.jvm.Jvm.current().javacExecutable
+                args '--release', '8', '-cp', clientJar.absolutePath, '-d', classes.absolutePath
+                args javaFiles.collect { it.absolutePath }
+            }
+
+            ant.zip(destfile: new File(packInto, "${plugin.name}.zip"), basedir: classes)
+            logger.lifecycle("packPlugins: packed ${plugin.name}")
+        }
+    }
+}
+
+// Everything downstream of preBuild then has a path to it, including the lint tasks that read the assets and
+// refuse to run against a folder produced by a task they have no ordering against.
+preBuild.dependsOn packPlugins
 
 dependencies {
     implementation 'javax.annotation:javax.annotation-api:1.3.2'
