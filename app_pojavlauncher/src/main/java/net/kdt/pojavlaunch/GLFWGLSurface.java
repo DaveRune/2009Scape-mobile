@@ -429,7 +429,12 @@ public class GLFWGLSurface extends View implements GrabListener {
 
             case MotionEvent.ACTION_POINTER_UP: // 6
                 if(e.getPointerId(e.getActionIndex()) == mPanPointerId) {
-                    mPanPointerId = -1;
+                    int remainingIndex = firstPointerIndexExcluding(e, e.getActionIndex());
+                    mPanPointerId = remainingIndex == -1 ? -1 : e.getPointerId(remainingIndex);
+                    if(remainingIndex != -1) {
+                        startX = e.getX(remainingIndex);
+                        startY = e.getY(remainingIndex);
+                    }
                     mPanTravelX = 0;
                     mPanTravelY = 0;
                 }
