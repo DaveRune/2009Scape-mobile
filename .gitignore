@@ -8,3 +8,6 @@ local.properties
 .DS_Store
 app_pojavlauncher/.cxx/
 .vs/
+
+# A diagnostic plugin, never packed into the app and never committed
+plugins/Probe/
