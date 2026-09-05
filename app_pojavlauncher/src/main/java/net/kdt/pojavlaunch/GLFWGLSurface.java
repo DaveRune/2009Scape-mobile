@@ -113,6 +113,10 @@ public class GLFWGLSurface extends View implements GrabListener {
     private boolean mShouldBeDown = false;
     /* When fingers are really near to each other, it tends to either swap or remove a pointer ! */
     private int mLastPointerCount = 0;
+    /* Whether a second finger has been down at any point since the current gesture started */
+    private boolean mGestureWentMultiTouch = false;
+    /* Whether a two finger scroll has a midpoint to measure its travel from */
+    private boolean mScrollOriginSet = false;
     /* Previous MotionEvent position, not scale */
     private float mPrevX, mPrevY;
     private int mStylusButton = -1;
@@ -276,13 +280,19 @@ public class GLFWGLSurface extends View implements GrabListener {
 
         // System.out.println("Pre touch, isTouchInHotbar=" + Boolean.toString(isTouchInHotbar) + ", action=" + MotionEvent.actionToString(e.getActionMasked()));
 
+        // The tap detector ignores which finger an event came from, and the click lands at pointer zero.
+        int action = e.getActionMasked();
+        if(action == MotionEvent.ACTION_DOWN) mGestureWentMultiTouch = false;
+        if(e.getPointerCount() > 1) mGestureWentMultiTouch = true;
+        if(action != MotionEvent.ACTION_MOVE) mScrollOriginSet = false;
+
         //Getting scaled position from the event
         /* Tells if a double tap happened [MOUSE GRAB ONLY]. Doesn't tell where though. */
         if(!CallbackBridge.isGrabbing()) {
             CallbackBridge.mouseX = (e.getX() * mTouchScale);
             CallbackBridge.mouseY = (e.getY() * mTouchScale);
             //One android click = one MC click
-            if(mSingleTapDetector.onTouchEvent(e)){ //
+            if(mSingleTapDetector.onTouchEvent(e) && !mGestureWentMultiTouch){
                 CallbackBridge.putMouseEventWithCoords(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_LEFT, CallbackBridge.mouseX, CallbackBridge.mouseY);
                 return true;
             }
