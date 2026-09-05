@@ -38,6 +38,12 @@
             app2:selectable="false"
             app2:showSeekBarValue="true" />
 
+        <SwitchPreference
+            android:key="cameraPanInvertY"
+            android:defaultValue="false"
+            android:summary="@string/preference_camera_pan_invert_y_description"
+            android:title="@string/preference_camera_pan_invert_y_title" />
+
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
             android:key="zoomSensitivity"
             android:summary="@string/preference_zoom_sensitivity_description"
@@ -47,11 +53,19 @@
             app2:selectable="false"
             app2:showSeekBarValue="true" />
 
+        <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
+            android:key="scrollSensitivity"
+            android:summary="@string/preference_scroll_sensitivity_description"
+            android:title="@string/preference_scroll_sensitivity_title"
+            android:icon="@drawable/ic_setting_mouse_speed"
+            app2:seekBarIncrement="5"
+            app2:selectable="false"
+            app2:showSeekBarValue="true" />
+
         <SwitchPreference
-            android:key="cameraPanInvertY"
+            android:key="scrollInvert"
             android:defaultValue="false"
-            android:summary="@string/preference_camera_pan_invert_y_description"
-            android:title="@string/preference_camera_pan_invert_y_title" />
+            android:title="@string/preference_scroll_invert_title" />
 
         <net.kdt.pojavlaunch.prefs.CustomSeekBarPreference
             android:key="timeLongPressTrigger"

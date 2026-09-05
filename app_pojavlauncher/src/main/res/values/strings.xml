@@ -313,6 +313,11 @@
     <string name="preference_ui_scale_description">Scales the interface without lowering the game resolution.</string>
     <string name="preference_zoom_sensitivity_title">Pinch zoom sensitivity</string>
     <string name="preference_zoom_sensitivity_description">How far a pinch travels before the camera zooms.</string>
+    <string name="preference_scroll_sensitivity_title">List scroll sensitivity</string>
+    <string name="preference_scroll_sensitivity_description">How far two fingers travel before a list scrolls one step.</string>
+    <string name="preference_scroll_invert_title">Invert list scrolling</string>
+    <string name="preference_scroll_invert_down">Dragging down moves down the list.</string>
+    <string name="preference_scroll_invert_up">Dragging down moves up the list.</string>
     <string name="preference_camera_pan_invert_y_title">Invert camera drag Y axis</string>
     <string name="preference_camera_pan_invert_y_description">Drag up to look up instead of down.</string>
     <string name="gles_hack_none">Don\'t shrink textures</string>

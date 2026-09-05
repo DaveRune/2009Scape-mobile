@@ -62,6 +62,7 @@ public class GLFWGLSurface extends View implements GrabListener {
     private float mPanTravelY = 0;
     private int mPanPointerId = -1;
     private final float mPanStep = Math.max(1f, Tools.dpToPx(PAN_STEP_DP) / LauncherPreferences.PREF_CAMERA_PAN_SENSITIVITY);
+    private final float mScrollStep = Math.max(1f, Tools.dpToPx(SCROLL_STEP_DP) / LauncherPreferences.PREF_SCROLL_SENSITIVITY);
     private ScaleGestureDetector scaleGestureDetector;
     private GestureDetector longPressDetector;
 
@@ -138,6 +139,10 @@ public class GLFWGLSurface extends View implements GrabListener {
     private static final int MAX_ZOOM_STEPS_PER_EVENT = 8;
     /* How much distance a finger has to go to scroll */
     public static final int FINGER_SCROLL_THRESHOLD = (int) Tools.dpToPx(6);
+    /* Two finger travel that earns one scroll notch at the default sensitivity */
+    private static final float SCROLL_STEP_DP = 28f;
+    /* Stops a pointer swap sending a list to its far end */
+    private static final int MAX_SCROLL_STEPS_PER_EVENT = 4;
     /* Whether the button was triggered, used by the handler */
     private static boolean triggeredLeftMouseButton = false;
     /* Handle hotbar throw button and mouse mining button */
@@ -341,13 +346,23 @@ public class GLFWGLSurface extends View implements GrabListener {
                     // Scrolling feature
                     if(LauncherPreferences.PREF_DISABLE_GESTURES) break;
                     // The pointer count can never be 0, and it is not 1, therefore it is >= 2
-                    int hScroll =  ((int) (e.getX() - mScrollLastInitialX)) / FINGER_SCROLL_THRESHOLD;
-                    int vScroll = ((int) (e.getY() - mScrollLastInitialY)) / FINGER_SCROLL_THRESHOLD;
+                    float scrollCentreX = pointerCentreX(e);
+                    float scrollCentreY = pointerCentreY(e);
+                    if(!mScrollOriginSet) {
+                        mScrollLastInitialX = scrollCentreX;
+                        mScrollLastInitialY = scrollCentreY;
+                        mScrollOriginSet = true;
+                        break;
+                    }
+
+                    int hScroll = (int) ((scrollCentreX - mScrollLastInitialX) / mScrollStep);
+                    int vScroll = (int) ((scrollCentreY - mScrollLastInitialY) / mScrollStep);
 
                     if(vScroll != 0 || hScroll != 0){
-                        CallbackBridge.sendScroll(hScroll, vScroll);
-                        mScrollLastInitialX = e.getX();
-                        mScrollLastInitialY = e.getY();
+                        mScrollLastInitialX += hScroll * mScrollStep;
+                        mScrollLastInitialY += vScroll * mScrollStep;
+                        if(!LauncherPreferences.PREF_SCROLL_INVERT) vScroll = -vScroll;
+                        CallbackBridge.sendScroll(clampScrollSteps(hScroll), clampScrollSteps(vScroll));
                     }
                     break;
                 }
@@ -466,6 +481,32 @@ public class GLFWGLSurface extends View implements GrabListener {
         longPressDetector.onTouchEvent(e);
 
         return true;
+    }
+
+    /** @return the index of a finger still on the screen once the given one has left, or -1 if it was the last */
+    private static int firstPointerIndexExcluding(MotionEvent e, int leavingIndex) {
+        for(int i = 0; i < e.getPointerCount(); i++) {
+            if(i != leavingIndex) return i;
+        }
+        return -1;
+    }
+
+    /** @return the midpoint of every finger on the screen, which is what a two finger scroll follows */
+    private static float pointerCentreX(MotionEvent e) {
+        float total = 0;
+        for(int i = 0; i < e.getPointerCount(); i++) total += e.getX(i);
+        return total / e.getPointerCount();
+    }
+
+    /** @return the midpoint of every finger on the screen, which is what a two finger scroll follows */
+    private static float pointerCentreY(MotionEvent e) {
+        float total = 0;
+        for(int i = 0; i < e.getPointerCount(); i++) total += e.getY(i);
+        return total / e.getPointerCount();
+    }
+
+    private static int clampScrollSteps(int steps) {
+        return Math.max(-MAX_SCROLL_STEPS_PER_EVENT, Math.min(MAX_SCROLL_STEPS_PER_EVENT, steps));
     }
 
     private void panCamera(float dx, float dy) throws InterruptedException {

@@ -24,6 +24,7 @@ public class LauncherPreferenceControlFragment extends LauncherPreferenceFragmen
         float mouseSpeed = LauncherPreferences.PREF_MOUSESPEED;
         float cameraPanSensitivity = LauncherPreferences.PREF_CAMERA_PAN_SENSITIVITY;
         float zoomSensitivity = LauncherPreferences.PREF_ZOOM_SENSITIVITY;
+        float scrollSensitivity = LauncherPreferences.PREF_SCROLL_SENSITIVITY;
         float gyroSpeed = LauncherPreferences.PREF_GYRO_SENSITIVITY;
         float joystickDeadzone = LauncherPreferences.PREF_DEADZONE_SCALE;
 
@@ -55,6 +56,11 @@ public class LauncherPreferenceControlFragment extends LauncherPreferenceFragmen
         zoomSeek.setRange(25, 300);
         zoomSeek.setValue((int)(zoomSensitivity * 100f));
         zoomSeek.setSuffix(" %");
+
+        CustomSeekBarPreference scrollSeek = findPreference("scrollSensitivity");
+        scrollSeek.setRange(25, 300);
+        scrollSeek.setValue((int)(scrollSensitivity * 100f));
+        scrollSeek.setSuffix(" %");
 
         CustomSeekBarPreference seek6 = findPreference("mousespeed");
         seek6.setRange(25, 300);
@@ -92,6 +98,9 @@ public class LauncherPreferenceControlFragment extends LauncherPreferenceFragmen
     }
 
     private void computeVisibility(){
+        findPreference("scrollInvert").setSummary(LauncherPreferences.PREF_SCROLL_INVERT
+                ? R.string.preference_scroll_invert_up
+                : R.string.preference_scroll_invert_down);
         findPreference("timeLongPressTrigger").setVisible(!LauncherPreferences.PREF_DISABLE_GESTURES);
         findPreference("gyroSensitivity").setVisible(LauncherPreferences.PREF_ENABLE_GYRO);
         findPreference("gyroSampleRate").setVisible(LauncherPreferences.PREF_ENABLE_GYRO);
