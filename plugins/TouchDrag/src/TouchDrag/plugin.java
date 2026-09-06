@@ -18,16 +18,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-/// Turns a touch into the press, hold and release the client needs before it will drag anything, and turns the camera.
-/// The launcher cannot see what the client is drawing, so it reports every touch as a key press instead,
-/// using codes above the end of the client's key map where the game ignores them. It reports a camera drag
-/// as arrow keys, one per fixed lump of finger travel, and this owns those too so that nothing else moves the camera.
+/// Turns a touch into the press, hold and release the client needs before it will drag anything, and moves the camera.
+/// The launcher cannot see what the client is drawing, so it reports every touch as a key press instead, using codes
+/// above the end of the client's key map. It reports a drag as arrow keys and a pinch as F3 and F4, one key per fixed
+/// lump of travel, and this owns all of those so that nothing else writes the camera between frames.
 @PluginMeta(author = "Dave", description = "Turns touches into drags and finger travel into camera movement", version = 2.0)
 public class plugin extends Plugin {
 
     private static final int KEY_TOUCH_DOWN = KeyEvent.VK_F13;
     private static final int KEY_TOUCH_TAP = KeyEvent.VK_F14;
     private static final int KEY_TOUCH_UP = KeyEvent.VK_F15;
+
+    private static final int KEY_ZOOM_IN = KeyEvent.VK_F3;
+    private static final int KEY_ZOOM_OUT = KeyEvent.VK_F4;
 
     /// The client offers this somewhere in its menu whenever the cursor is over the world rather than an interface.
     private static final short WALK_HERE = 60;
@@ -51,6 +54,11 @@ public class plugin extends Plugin {
     /// What MobileClientBindings applies per arrow key. Matching it keeps the launcher's pan sensitivity slider honest.
     private static final double UNITS_PER_CAMERA_KEY = 15.0;
 
+    /// What MobileClientBindings applies per pinch key, and the range it holds the zoom to.
+    private static final double UNITS_PER_ZOOM_KEY = 50.0;
+    private static final double MIN_ZOOM = 1.0;
+    private static final double MAX_ZOOM = 2000.0;
+
     private static final double YAW_UNITS_PER_TURN = 2048.0;
 
     /// The client holds the camera between looking level and looking down at the player.
@@ -59,6 +67,7 @@ public class plugin extends Plugin {
 
     /// A jump this large is a cutscene or a script placing the camera, and it is followed rather than eased into.
     private static final double SNAP_UNITS = 150.0;
+    private static final double SNAP_ZOOM_UNITS = 250.0;
 
     /// Below this the remainder is worth less than the whole unit the client rounds to, so it is spent outright.
     private static final double SETTLE_UNITS = 0.05;
@@ -82,13 +91,20 @@ public class plugin extends Plugin {
     private final Object cameraLock = new Object();
     private double bankedYaw = 0.0;
     private double bankedPitch = 0.0;
+    private double bankedZoom = 0.0;
 
     private final Follower yaw = new Follower();
     private final Follower pitch = new Follower();
+    private final Follower zoom = new Follower();
 
     private int settleMs = DEFAULT_SETTLE_MS;
     private double writtenYaw;
     private double writtenPitch;
+    private double writtenZoom;
+
+    /// The client keeps the zoom whole, so the fraction is held above rather than read back as somebody else's change.
+    private int lastZoomWritten;
+
     private boolean adoptedTheCamera = false;
 
     private final KeyAdapter listener = new KeyAdapter() {
@@ -109,12 +125,17 @@ public class plugin extends Plugin {
                 if (!swallowsCameraKeys()) bankCameraKey(event.getKeyCode());
                 return;
             }
+            if (isZoomKey(event.getKeyCode())) {
+                bankZoomKey(event.getKeyCode());
+                return;
+            }
             for (KeyAdapter other : otherKeyListeners) other.keyPressed(event);
         }
 
         @Override
         public void keyReleased(KeyEvent event) {
-            if (isTouchKey(event.getKeyCode()) || isCameraKey(event.getKeyCode())) return;
+            if (isTouchKey(event.getKeyCode()) || isCameraKey(event.getKeyCode())
+                    || isZoomKey(event.getKeyCode())) return;
             for (KeyAdapter other : otherKeyListeners) other.keyReleased(event);
         }
 
@@ -155,6 +176,10 @@ public class plugin extends Plugin {
                 || keycode == KeyEvent.VK_UP || keycode == KeyEvent.VK_DOWN;
     }
 
+    private static boolean isZoomKey(int keycode) {
+        return keycode == KEY_ZOOM_IN || keycode == KEY_ZOOM_OUT;
+    }
+
     private boolean swallowsCameraKeys() {
         return holdingButton || (touchDown && !decided);
     }
@@ -165,6 +190,13 @@ public class plugin extends Plugin {
             if (keycode == KeyEvent.VK_LEFT) bankedYaw -= UNITS_PER_CAMERA_KEY;
             if (keycode == KeyEvent.VK_UP) bankedPitch += UNITS_PER_CAMERA_KEY;
             if (keycode == KeyEvent.VK_DOWN) bankedPitch -= UNITS_PER_CAMERA_KEY;
+        }
+    }
+
+    /// The zoom is how far the camera sits from the player, so pinching in makes it smaller rather than larger.
+    private void bankZoomKey(int keycode) {
+        synchronized (cameraLock) {
+            bankedZoom += keycode == KEY_ZOOM_IN ? -UNITS_PER_ZOOM_KEY : UNITS_PER_ZOOM_KEY;
         }
     }
 
@@ -210,47 +242,53 @@ public class plugin extends Plugin {
     private void moveTheCamera(long elapsed) {
         double arrivedYaw;
         double arrivedPitch;
+        double arrivedZoom;
         synchronized (cameraLock) {
             arrivedYaw = bankedYaw;
             arrivedPitch = bankedPitch;
+            arrivedZoom = bankedZoom;
             bankedYaw = 0.0;
             bankedPitch = 0.0;
+            bankedZoom = 0.0;
         }
 
         double movedElsewhereYaw = shortestTurn(Camera.yawTarget - writtenYaw);
         double movedElsewherePitch = Camera.pitchTarget - writtenPitch;
+        double movedElsewhereZoom = Camera.ZOOM - lastZoomWritten;
         if (!adoptedTheCamera
                 || Math.abs(movedElsewhereYaw) >= SNAP_UNITS
-                || Math.abs(movedElsewherePitch) >= SNAP_UNITS) {
+                || Math.abs(movedElsewherePitch) >= SNAP_UNITS
+                || Math.abs(movedElsewhereZoom) >= SNAP_ZOOM_UNITS) {
             adoptWhereTheGamePutTheCamera();
             return;
         }
 
         arrivedYaw += movedElsewhereYaw;
         arrivedPitch += movedElsewherePitch;
+        arrivedZoom += movedElsewhereZoom;
 
-        double stepYaw;
-        double stepPitch;
-        if (settleMs == MIN_SETTLE_MS || elapsed <= 0) {
-            stepYaw = arrivedYaw;
-            stepPitch = arrivedPitch;
-        } else {
-            double fraction = fractionToSpend(Math.min(elapsed, LONGEST_USEFUL_FRAME_MS));
-            stepYaw = yaw.letOut(arrivedYaw, fraction);
-            stepPitch = pitch.letOut(arrivedPitch, fraction);
-        }
+        double fraction = fractionToSpend(elapsed);
+        double stepYaw = yaw.letOut(arrivedYaw, fraction);
+        double stepPitch = pitch.letOut(arrivedPitch, fraction);
+        double stepZoom = zoom.letOut(arrivedZoom, fraction);
 
         writtenYaw = wrapYaw(writtenYaw + stepYaw);
         writtenPitch = clampPitch(writtenPitch + stepPitch);
+        writtenZoom = clampZoom(writtenZoom + stepZoom);
+        lastZoomWritten = (int) Math.round(writtenZoom);
         Camera.yawTarget = writtenYaw;
         Camera.pitchTarget = writtenPitch;
+        Camera.ZOOM = lastZoomWritten;
     }
 
     private void adoptWhereTheGamePutTheCamera() {
         writtenYaw = Camera.yawTarget;
         writtenPitch = Camera.pitchTarget;
+        writtenZoom = Camera.ZOOM;
+        lastZoomWritten = Camera.ZOOM;
         yaw.forget();
         pitch.forget();
+        zoom.forget();
         adoptedTheCamera = true;
     }
 
@@ -288,8 +326,10 @@ public class plugin extends Plugin {
     }
 
     /// Exponential easing off the real frame time, and half the settle each because the two stages run in series.
+    /// A whole fraction spends everything the moment it arrives, which is what smoothing turned off means.
     private double fractionToSpend(long elapsed) {
-        return 1.0 - Math.exp(-2.0 * (double) elapsed / (double) settleMs);
+        if (settleMs == MIN_SETTLE_MS || elapsed <= 0) return 1.0;
+        return 1.0 - Math.exp(-2.0 * (double) Math.min(elapsed, LONGEST_USEFUL_FRAME_MS) / (double) settleMs);
     }
 
     private void pressLeftButton() {
@@ -341,6 +381,11 @@ public class plugin extends Plugin {
     private static double clampPitch(double angle) {
         if (angle < MIN_PITCH) return MIN_PITCH;
         return Math.min(angle, MAX_PITCH);
+    }
+
+    private static double clampZoom(double distance) {
+        if (distance < MIN_ZOOM) return MIN_ZOOM;
+        return Math.min(distance, MAX_ZOOM);
     }
 
     private static int clampSettle(int milliseconds) {
