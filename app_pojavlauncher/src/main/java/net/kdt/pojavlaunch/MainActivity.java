@@ -48,6 +48,7 @@ import net.kdt.pojavlaunch.customcontrols.ControlDrawerData;
 import net.kdt.pojavlaunch.customcontrols.ControlLayout;
 import net.kdt.pojavlaunch.customcontrols.CustomControls;
 import net.kdt.pojavlaunch.customcontrols.EditorExitable;
+import net.kdt.pojavlaunch.customcontrols.keyboard.KeyboardRoom;
 import net.kdt.pojavlaunch.customcontrols.keyboard.LwjglCharSender;
 import net.kdt.pojavlaunch.customcontrols.keyboard.TouchCharInput;
 import net.kdt.pojavlaunch.prefs.LauncherPreferences;
@@ -77,6 +78,7 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
     private View mDrawerPullButton;
     private View contentFrame;
     private GyroControl mGyroControl = null;
+    private KeyboardRoom mKeyboardRoom;
     public static ControlLayout mControlLayout;
 
     private ArrayAdapter<String> gameActionArrayAdapter;
@@ -120,6 +122,9 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
         MCOptionUtils.MCOptionListener optionListener = MCOptionUtils::getMcScale;
         MCOptionUtils.addMCOptionListener(optionListener);
         mControlLayout.setModifiable(false);
+
+        mKeyboardRoom = new KeyboardRoom(this, minecraftGLView);
+        mKeyboardRoom.start();
     }
 
     protected void initLayout(int resId) {

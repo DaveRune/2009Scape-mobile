@@ -759,6 +759,11 @@ public class GLFWGLSurface extends View implements GrabListener {
         refreshSize();
     }
 
+    /** Converts a length in screen pixels to the same length in the client's window, which is smaller */
+    public int toWindowPixels(int screenPixels){
+        return Math.round(screenPixels * mTouchScale);
+    }
+
     /** Called when the size need to be set at any point during the surface lifecycle **/
     public void refreshSize(){
         int surfaceWidth = getWidth();
