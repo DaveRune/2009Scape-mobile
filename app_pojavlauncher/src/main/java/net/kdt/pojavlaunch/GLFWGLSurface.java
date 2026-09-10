@@ -117,6 +117,9 @@ public class GLFWGLSurface extends View implements GrabListener {
     private boolean mGestureWentMultiTouch = false;
     /* Whether a two finger scroll has a midpoint to measure its travel from */
     private boolean mScrollOriginSet = false;
+    /* Where the first finger landed, non-scaled, so a gesture that goes nowhere can be told from one that travels */
+    private float mTouchDownX, mTouchDownY;
+    private boolean mReportedDrag = false;
     /* Previous MotionEvent position, not scale */
     private float mPrevX, mPrevY;
     private int mStylusButton = -1;
@@ -146,6 +149,8 @@ public class GLFWGLSurface extends View implements GrabListener {
     private static final int TOUCH_DOWN = AWTInputEvent.VK_F13;
     private static final int TOUCH_TAP = AWTInputEvent.VK_F14;
     private static final int TOUCH_UP = AWTInputEvent.VK_F15;
+    private static final int TOUCH_DRAG = AWTInputEvent.VK_F16;
+    private static final int TOUCH_HOLD = AWTInputEvent.VK_F17;
     /* Whether the button was triggered, used by the handler */
     private static boolean triggeredLeftMouseButton = false;
     /* Handle hotbar throw button and mouse mining button */
@@ -193,7 +198,10 @@ public class GLFWGLSurface extends View implements GrabListener {
             @Override
             public void onLongPress(MotionEvent e) {
                 super.onLongPress(e);
-                sendTouchState(TOUCH_UP);
+                if(!CallbackBridge.isGrabbing()) {
+                    sendTouchState(TOUCH_HOLD);
+                    return;
+                }
                 CallbackBridge.putMouseEventWithCoords(LwjglGlfwKeycode.GLFW_MOUSE_BUTTON_RIGHT, CallbackBridge.mouseX, CallbackBridge.mouseY);
             }
         });
@@ -302,8 +310,18 @@ public class GLFWGLSurface extends View implements GrabListener {
 
             // Only the client knows what is under the finger, so the TouchDrag plugin decides what a touch means
             boolean tapped = mSingleTapDetector.onTouchEvent(e) && !mGestureWentMultiTouch;
-            if(action == MotionEvent.ACTION_DOWN) sendTouchState(TOUCH_DOWN);
-            else if(action != MotionEvent.ACTION_MOVE) sendTouchState(tapped ? TOUCH_TAP : TOUCH_UP);
+            if(action == MotionEvent.ACTION_DOWN){
+                mTouchDownX = e.getX();
+                mTouchDownY = e.getY();
+                mReportedDrag = false;
+                sendTouchState(TOUCH_DOWN);
+            }else if(action == MotionEvent.ACTION_MOVE){
+                if(!mReportedDrag && !mGestureWentMultiTouch
+                        && MathUtils.dist(e.getX(), e.getY(), mTouchDownX, mTouchDownY) >= FINGER_STILL_THRESHOLD){
+                    mReportedDrag = true;
+                    sendTouchState(TOUCH_DRAG);
+                }
+            }else sendTouchState(tapped ? TOUCH_TAP : TOUCH_UP);
         }
 
         // Check double tap state, used for the hotbar
