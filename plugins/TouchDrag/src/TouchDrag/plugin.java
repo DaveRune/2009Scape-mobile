@@ -363,6 +363,11 @@ public class plugin extends Plugin {
 
     /// Reading the top entry alone would treat a drag that started on an npc as an attack, so the whole menu counts.
     private void decideWhatTheFingerLandedOn() {
+        if (somethingIsSelected()) {
+            touch = Touch.WORLD;
+            return;
+        }
+
         if (MiniMenu.size <= 0) return;
 
         if (menuOffersWalkHere()) {
@@ -378,6 +383,11 @@ public class plugin extends Plugin {
 
         // Any other press is acted on straight away, so making one before the finger moves would turn a hold into a click
         touch = Touch.WAITING_TO_DRAG;
+    }
+
+    /// True while an item or a spell is waiting for a target.
+    private static boolean somethingIsSelected() {
+        return MiniMenu.anInt5014 != 0 || MiniMenu.aBoolean302;
     }
 
     private boolean menuOffersWalkHere() {
