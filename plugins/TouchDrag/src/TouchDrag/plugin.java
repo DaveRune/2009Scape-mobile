@@ -4,9 +4,12 @@ import plugin.Plugin;
 import plugin.annotations.PluginMeta;
 import plugin.api.API;
 import rt4.Camera;
+import rt4.Component;
 import rt4.GameShell;
+import rt4.InterfaceList;
 import rt4.MiniMenu;
 import rt4.Mouse;
+import rt4.ServerActiveProperties;
 import rt4.client;
 
 import java.awt.event.KeyAdapter;
@@ -18,16 +21,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-/// Turns a touch into the press, hold and release the client needs before it will drag anything, and moves the camera.
+/// Turns a touch into the click, drag or menu the client would get from a mouse, and moves the camera.
 /// The launcher cannot see what the client is drawing, so it reports every touch as a key press instead, using codes
-/// above the end of the client's key map. It reports a drag as arrow keys and a pinch as F3 and F4, one key per fixed
-/// lump of travel, and this owns all of those so that nothing else writes the camera between frames.
-@PluginMeta(author = "Dave", description = "Turns touches into drags and finger travel into camera movement", version = 2.0)
+/// above the end of the client's key map. It reports finger travel as arrow keys and a pinch as F3 and F4, one key per
+/// fixed lump of travel, and this owns all of those so that nothing else writes the camera between frames.
+@PluginMeta(author = "Dave", description = "Turns touches into clicks, drags and menus, and finger travel into camera movement", version = 3.0)
 public class plugin extends Plugin {
 
     private static final int KEY_TOUCH_DOWN = KeyEvent.VK_F13;
     private static final int KEY_TOUCH_TAP = KeyEvent.VK_F14;
     private static final int KEY_TOUCH_UP = KeyEvent.VK_F15;
+    private static final int KEY_TOUCH_DRAG = KeyEvent.VK_F16;
+    private static final int KEY_TOUCH_HOLD = KeyEvent.VK_F17;
 
     private static final int KEY_ZOOM_IN = KeyEvent.VK_F3;
     private static final int KEY_ZOOM_OUT = KeyEvent.VK_F4;
@@ -39,7 +44,11 @@ public class plugin extends Plugin {
     private static final int TICKS_BEFORE_READING = 2;
 
     private static final int LEFT_BUTTON = 1;
+    private static final int RIGHT_BUTTON = 2;
     private static final int RELEASED = 0;
+
+    /// The menu actions that carry an object. Copied from the client, which uses the same list to spot a press it holds.
+    private static final short[] OBJ_MENU_ACTIONS = {5, 7, 13, 22, 23, 25, 35, 43, 47, 48, 58, 1006};
 
     private static final String CMD_SMOOTHING = "::camerasmoothing";
     private static final String CMD_SMOOTHING_SHORT = "::cs";
@@ -78,14 +87,15 @@ public class plugin extends Plugin {
     private final List<KeyAdapter> otherKeyListeners = new ArrayList<>();
     private int knownListenerCount = -1;
 
-    private boolean touchDown = false;
-    private boolean decided = false;
-    private boolean holdingButton = false;
+    private volatile Touch touch = Touch.NONE;
     private int readTouchOnTick = 0;
+
+    private volatile boolean travelReported = false;
+    private volatile boolean holdReported = false;
 
     private boolean tapWaiting = false;
     private int tapOnTick = 0;
-    private int releaseTapOnTick = 0;
+    private int releaseButtonOnTick = 0;
 
     /// Arrow keys arrive on the launcher's input thread and the camera is moved on the game thread, so the two meet here.
     private final Object cameraLock = new Object();
@@ -119,6 +129,12 @@ public class plugin extends Plugin {
                     return;
                 case KEY_TOUCH_UP:
                     onTouchLifted(false);
+                    return;
+                case KEY_TOUCH_DRAG:
+                    travelReported = true;
+                    return;
+                case KEY_TOUCH_HOLD:
+                    holdReported = true;
                     return;
             }
             if (isCameraKey(event.getKeyCode())) {
@@ -168,7 +184,8 @@ public class plugin extends Plugin {
     }
 
     private static boolean isTouchKey(int keycode) {
-        return keycode == KEY_TOUCH_DOWN || keycode == KEY_TOUCH_TAP || keycode == KEY_TOUCH_UP;
+        return keycode == KEY_TOUCH_DOWN || keycode == KEY_TOUCH_TAP || keycode == KEY_TOUCH_UP
+                || keycode == KEY_TOUCH_DRAG || keycode == KEY_TOUCH_HOLD;
     }
 
     private static boolean isCameraKey(int keycode) {
@@ -181,7 +198,7 @@ public class plugin extends Plugin {
     }
 
     private boolean swallowsCameraKeys() {
-        return holdingButton || (touchDown && !decided);
+        return touch != Touch.NONE && touch != Touch.WORLD;
     }
 
     private void bankCameraKey(int keycode) {
@@ -201,39 +218,43 @@ public class plugin extends Plugin {
     }
 
     private void onTouchDown() {
-        touchDown = true;
-        decided = false;
+        if (touch == Touch.DRAGGING) Mouse.eventAction = RELEASED;
+
+        touch = Touch.UNREAD;
+        travelReported = false;
+        holdReported = false;
         readTouchOnTick = client.loop + TICKS_BEFORE_READING;
-        releaseButton();
     }
 
     private void onTouchLifted(boolean wasTap) {
-        touchDown = false;
-        decided = true;
+        Touch lifted = touch;
+        touch = Touch.NONE;
 
-        if (holdingButton) {
-            releaseButton();
+        if (lifted == Touch.DRAGGING) {
+            Mouse.eventAction = RELEASED;
             return;
         }
 
-        if (wasTap) {
-            tapWaiting = true;
-            tapOnTick = client.loop + TICKS_BEFORE_READING;
-        }
+        if (!wasTap || lifted == Touch.NONE || lifted == Touch.MENU_OPEN) return;
+
+        tapWaiting = true;
+        tapOnTick = client.loop + TICKS_BEFORE_READING;
     }
 
     @Override
     public void LateDraw(long elapsed) {
         if (API.registeredKeyListeners.size() != knownListenerCount) takeOverTheKeyboard();
 
-        if (holdingButton) Mouse.eventAction = LEFT_BUTTON;
+        if (touch == Touch.DRAGGING) Mouse.eventAction = LEFT_BUTTON;
 
-        if (releaseTapOnTick != 0 && client.loop >= releaseTapOnTick) {
+        if (releaseButtonOnTick != 0 && client.loop >= releaseButtonOnTick) {
             Mouse.eventAction = RELEASED;
-            releaseTapOnTick = 0;
+            releaseButtonOnTick = 0;
         }
 
-        if (touchDown && !decided && client.loop >= readTouchOnTick) decideWhatTheFingerLandedOn();
+        if (touch == Touch.UNREAD && client.loop >= readTouchOnTick) decideWhatTheFingerLandedOn();
+        if (travelReported && touch == Touch.WAITING_TO_DRAG) pressAndHold();
+        if (holdReported) openTheMenu();
         if (tapWaiting && client.loop >= tapOnTick) tap();
 
         moveTheCamera(elapsed);
@@ -332,28 +353,31 @@ public class plugin extends Plugin {
         return 1.0 - Math.exp(-2.0 * (double) Math.min(elapsed, LONGEST_USEFUL_FRAME_MS) / (double) settleMs);
     }
 
-    private void pressLeftButton() {
+    private void pressButton(int button) {
         Mouse.eventMouseDownX = Mouse.eventMouseX;
         Mouse.eventMouseDownY = Mouse.eventMouseY;
         Mouse.eventTime = System.currentTimeMillis();
-        Mouse.eventButton = LEFT_BUTTON;
-        Mouse.eventAction = LEFT_BUTTON;
-    }
-
-    private void releaseButton() {
-        if (holdingButton) Mouse.eventAction = RELEASED;
-        holdingButton = false;
+        Mouse.eventButton = button;
+        Mouse.eventAction = button;
     }
 
     /// Reading the top entry alone would treat a drag that started on an npc as an attack, so the whole menu counts.
     private void decideWhatTheFingerLandedOn() {
         if (MiniMenu.size <= 0) return;
 
-        decided = true;
-        if (menuOffersWalkHere()) return;
+        if (menuOffersWalkHere()) {
+            touch = Touch.WORLD;
+            return;
+        }
 
-        holdingButton = true;
-        pressLeftButton();
+        // The client reads a press against the cursor as it finds it, so a slot has to be pressed before the finger moves off it
+        if (topEntryIsHeldForADrag()) {
+            pressAndHold();
+            return;
+        }
+
+        // Any other press is acted on straight away, so making one before the finger moves would turn a hold into a click
+        touch = Touch.WAITING_TO_DRAG;
     }
 
     private boolean menuOffersWalkHere() {
@@ -363,10 +387,52 @@ public class plugin extends Plugin {
         return false;
     }
 
+    private static boolean topEntryIsHeldForADrag() {
+        boolean carriesAnObj = false;
+        for (short candidate : OBJ_MENU_ACTIONS) {
+            if (candidate == MiniMenu.actions[MiniMenu.size - 1]) {
+                carriesAnObj = true;
+                break;
+            }
+        }
+        if (!carriesAnObj) return false;
+
+        Component component = InterfaceList.getComponent(MiniMenu.intArgs2[MiniMenu.size - 1]);
+        if (component == null) return false;
+        ServerActiveProperties properties = InterfaceList.getServerActiveProperties(component);
+        return properties.isObjSwapEnabled() || properties.isObjReplaceEnabled();
+    }
+
+    private void pressAndHold() {
+        touch = Touch.DRAGGING;
+        pressButton(LEFT_BUTTON);
+    }
+
+    private void openTheMenu() {
+        holdReported = false;
+        if (touch == Touch.NONE || touch == Touch.MENU_OPEN) return;
+
+        takeBackTheHeldPress();
+        touch = Touch.MENU_OPEN;
+        pressButton(RIGHT_BUTTON);
+        releaseButtonOnTick = client.loop + TICKS_BEFORE_READING;
+    }
+
+    /// The client keeps a press on a slot until it is let go, so clearing the slot leaves the release with nothing to act on.
+    private void takeBackTheHeldPress() {
+        if (touch != Touch.DRAGGING) return;
+        Mouse.eventAction = RELEASED;
+
+        Component pressed = InterfaceList.clickedInventoryComponent;
+        if (pressed == null) return;
+        InterfaceList.clickedInventoryComponent = null;
+        InterfaceList.redraw(pressed);
+    }
+
     private void tap() {
         tapWaiting = false;
-        pressLeftButton();
-        releaseTapOnTick = client.loop + TICKS_BEFORE_READING;
+        pressButton(LEFT_BUTTON);
+        releaseButtonOnTick = client.loop + TICKS_BEFORE_READING;
     }
 
     private static double shortestTurn(double units) {
@@ -391,6 +457,11 @@ public class plugin extends Plugin {
     private static int clampSettle(int milliseconds) {
         if (milliseconds < MIN_SETTLE_MS) return MIN_SETTLE_MS;
         return Math.min(milliseconds, MAX_SETTLE_MS);
+    }
+
+    /// Where one finger has got to, from landing on the screen to becoming a click, a drag or a menu.
+    private enum Touch {
+        NONE, UNREAD, WORLD, WAITING_TO_DRAG, DRAGGING, MENU_OPEN
     }
 
     /// Holds back one axis of camera movement and lets it out through two easing stages in series.
