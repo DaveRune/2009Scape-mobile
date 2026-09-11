@@ -27,7 +27,7 @@ I used AI.
 | | |
 |---|---|
 | Interface scale | The world renders at your device's full resolution while the interface is drawn larger, so nothing is soft and nothing is too small to tap. Slider in Settings. |
-| View distance | Stock is 28 tiles, this defaults to 48 and goes to 51. Use command `::vd #` in game and relog.|
+| View distance | Stock is 28 tiles, this defaults to 48 and goes to 103, the whole loaded map. Use `::vd #` in game, and `::vd fog` to turn the fog off. Both take effect straight away. |
 | Up to date client | The client is rebuilt from source with two years of upstream desktop fixes merged in, including a sleep in the game loop, roof hiding and correct chat icons. |
 | Camera controls | Pan sensitivity and invert Y, both in Control customization. |
 | Pinch zoom | With its own sensitivity slider. |
