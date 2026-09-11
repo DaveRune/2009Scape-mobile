@@ -66,6 +66,13 @@ public class GameService extends Service {
         return START_NOT_STICKY;
     }
 
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
+        stopSelf();
+        MainActivity.fullyExit();
+    }
+
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {

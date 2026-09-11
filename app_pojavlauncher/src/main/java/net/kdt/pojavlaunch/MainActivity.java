@@ -258,9 +258,11 @@ public class MainActivity extends BaseActivity implements ControlButtonMenuListe
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(PREF_KEEP_RUNNING_BACKGROUND) GameService.stopService(this);
+        GameService.stopService(this);
         CallbackBridge.removeGrabListener(touchpad);
         CallbackBridge.removeGrabListener(minecraftGLView);
+        // Only one JVM can ever be created in a process.
+        if(isFinishing()) fullyExit();
     }
 
     @Override
