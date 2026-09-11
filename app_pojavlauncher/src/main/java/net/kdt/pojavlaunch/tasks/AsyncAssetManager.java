@@ -277,14 +277,14 @@ public class AsyncAssetManager {
     }
 
     /**
-     * The client jar is replaced whenever the launcher version changes, so an app update always
+     * The client jar is replaced whenever the app itself is installed, so an app update always
      * brings its own client with it. Without this an existing install keeps whichever client it
      * first unpacked, forever, and gets a new launcher driving an old client.
      */
     private static void unpackClient(Context ctx) throws IOException {
         File jar = new File(Tools.DIR_DATA, "rt4.jar");
         File versionFile = new File(Tools.DIR_DATA, "rt4.jar.version");
-        String shipped = BuildConfig.VERSION_NAME;
+        String shipped = describeThisInstall(ctx);
 
         if (jar.exists() && versionFile.exists() && shipped.equals(Tools.read(versionFile.getAbsolutePath()))) {
             Log.i("UnpackPrep", "rt4.jar: Client is up-to-date with the launcher, continuing...");
