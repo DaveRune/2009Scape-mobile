@@ -2,78 +2,20 @@ plugins {
     id 'com.android.application' version '7.4.2'
 }
 
-static def getDate() { return new Date().format('yyyyMMdd') }
-
 def pluginSources = file("$rootDir/plugins")
 def generatedPluginAssets = file("$buildDir/generated/plugin-assets")
 def clientJar = file("$projectDir/src/main/assets/rt4.jar")
 
 // Android refuses to install a build numbered lower than the one already on the device.
 // The project this is forked from numbers its releases 9934841 plus the CI run number, so this
-// sits above that range to install over them. Raise it for every release.
+// sits above that range to install over them. Raise both of these for every release.
 // The name must not match a property of the defaultConfig block, or that wins and this is ignored.
 static def getReleaseNumber() {
     return 9950001
 }
 
 def getVersionName = {
-    // Get the last version tag, as well as the short head of the last commit
-    ByteArrayOutputStream TAG = new ByteArrayOutputStream()
-    ByteArrayOutputStream BRANCH = new ByteArrayOutputStream()
-    // Used by the fallback for github actions
-    ByteArrayOutputStream TAG_PART_COMMIT = new ByteArrayOutputStream()
-    String TAG_STRING
-
-    exec {
-        try {
-            commandLine 'git', 'describe', '--tags'
-            ignoreExitValue true
-            standardOutput = TAG
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    if (TAG.toString() == "") {
-        exec {
-            // Fallback for action builds
-            try {
-                commandLine 'git', 'describe', '--always', '--tags'
-                ignoreExitValue true
-                standardOutput = TAG_PART_COMMIT
-            } catch (Exception e) {
-            }
-        }
-    }
-
-
-    if(TAG.toString() != ""){
-        TAG_STRING = TAG.toString()
-    }else {
-        if(TAG_PART_COMMIT.toString().trim() == ""){
-             //Fallback no repo
-            return ("LOCAL-" + "${getDate()}")
-        }else {
-            // Used by github actions
-            TAG_STRING =  'dahlia-' + "${getDate()}" + "-" + TAG_PART_COMMIT.toString().trim()
-        }
-
-    }
-
-    exec {
-        try {
-            commandLine 'git', 'branch', '--show-current'
-            ignoreExitValue true
-            standardOutput = BRANCH
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    // A release is cut from master, and "hd-3.0-master" is not a version anybody wants to read.
-    String NAME = TAG_STRING.trim().replace("-g", "-")
-    String BRANCH_NAME = BRANCH.toString().trim()
-    return BRANCH_NAME == "master" ? NAME : NAME + "-" + BRANCH_NAME
+    return "hd-3.1"
 }
 
 configurations {
